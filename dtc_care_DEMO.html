@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doctors That Care — DEMO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0B1F3A;--navy2:#122847;--gold:#C9A84C;--gold2:#E8C76A;
+  --gold-bg:#FDF8EC;--gold-border:#E8C76A40;--cream:#FAFAF7;
+  --text:#0B1F3A;--text2:#4A6080;--text3:#8BA0B8;
+  --border:#D4E0EC;--border2:#B8CCDE;
+  --success:#1A7A4A;--success-bg:#E8F5EE;--success-border:#A3D4B8;
+  --danger:#C0392B;--danger-bg:#FDECEA;--danger-border:#F1A89A;
+  --warning:#B8540A;--warning-bg:#FEF3E8;--warning-border:#F0BC80;
+  --info:#1558A0;--info-bg:#E8F0FB;--info-border:#9EC5FE;
+  --radius:10px;--radius-lg:16px;--radius-xl:24px;
+  --shadow:0 2px 12px rgba(11,31,58,.08);--shadow-lg:0 8px 32px rgba(11,31,58,.12);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--navy);position:relative;overflow:hidden}
+.login-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(201,168,76,.15),transparent)}
+.login-wrap::after{content:'DTC';position:absolute;right:-40px;bottom:-40px;font-family:'DM Serif Display',serif;font-size:280px;color:rgba(255,255,255,.03);line-height:1;pointer-events:none}
+.login-box{background:rgba(255,255,255,.04);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius-xl);padding:48px;width:100%;max-width:440px;position:relative;z-index:1}
+.login-mark{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:28px;margin:0 auto 24px;box-shadow:0 8px 24px rgba(201,168,76,.4)}
+.login-box h1{font-family:'DM Serif Display',serif;font-size:28px;color:#fff;text-align:center;margin-bottom:4px}
+.login-box p{font-size:13px;color:rgba(255,255,255,.5);text-align:center;margin-bottom:32px}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px}
+.role-btn{padding:14px 10px;border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);background:rgba(255,255,255,.04);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;text-align:center;color:#fff}
+.role-btn:hover{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.08)}
+.role-btn.selected{border-color:var(--gold);background:rgba(201,168,76,.15)}
+.role-btn i{display:block;font-size:24px;margin-bottom:6px;color:rgba(255,255,255,.4)}
+.role-btn.selected i{color:var(--gold)}
+.role-btn span{font-size:12px;font-weight:500}
+.form-row label{font-size:12px;color:rgba(255,255,255,.5);display:block;margin-bottom:6px;font-weight:500;letter-spacing:.5px;text-transform:uppercase}
+.form-row input{width:100%;padding:12px 16px;border-radius:var(--radius);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border .2s;margin-bottom:16px}
+.form-row input::placeholder{color:rgba(255,255,255,.25)}
+.form-row input:focus{border-color:var(--gold)}
+.login-btn{width:100%;padding:14px;border-radius:var(--radius);border:none;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.login-err{font-size:12px;color:#f1a89a;text-align:center;margin-top:10px;min-height:18px}
+
+/* APP SHELL */
+.app{display:none;min-height:100vh}
+.sidebar{width:260px;background:var(--navy);position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:100}
+.sidebar-brand{padding:28px 24px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sidebar-brand-mark{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;color:var(--navy);font-size:18px;margin-bottom:12px}
+.sidebar-brand h1{font-family:'DM Serif Display',serif;font-size:16px;color:#fff;margin-bottom:2px}
+.sidebar-brand p{font-size:11px;color:rgba(255,255,255,.4)}
+.sidebar-nav{padding:16px 12px;flex:1;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:600;color:rgba(255,255,255,.25);letter-spacing:1px;text-transform:uppercase;padding:8px 12px 6px;margin-top:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);color:rgba(255,255,255,.5);cursor:pointer;transition:all .2s;margin-bottom:2px;font-size:13px;font-weight:500}
+.nav-item i{font-size:18px;flex-shrink:0}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
+.nav-item.active{background:rgba(201,168,76,.15);color:var(--gold)}
+.sidebar-footer{padding:16px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.role-pill{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(201,168,76,.15);color:var(--gold);font-weight:600;display:inline-block;margin-bottom:8px}
+.signout-btn{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.4);font-size:13px;cursor:pointer;padding:8px 12px;border-radius:var(--radius);transition:all .2s;width:100%}
+.signout-btn:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.7)}
+
+/* MAIN */
+.main{margin-left:260px;padding:32px;min-height:100vh}
+.page-header{margin-bottom:28px}
+.page-header h2{font-family:'DM Serif Display',serif;font-size:28px;color:var(--navy);margin-bottom:4px}
+.page-header p{font-size:14px;color:var(--text2)}
+.page{display:none}.page.active{display:block}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.stat-val{font-family:'DM Serif Display',serif;font-size:36px;color:var(--navy);margin-bottom:4px}
+.stat-val.green{color:var(--success)}.stat-val.gold{color:var(--gold)}
+.stat-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+.stat-icon{position:absolute;right:16px;top:16px;width:36px;height:36px;border-radius:10px;background:var(--gold-bg);display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:18px}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;box-shadow:var(--shadow)}
+.card-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--navy);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
+
+/* SDG BADGES */
+.sdg-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.sdg{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.sdg-3{background:#4c9f38;color:#fff}.sdg-8{background:#a21942;color:#fff}
+.sdg-10{background:#dd1367;color:#fff}.sdg-16{background:#00689d;color:#fff}
+.credit-pill{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-border);white-space:nowrap}
+
+/* PHASE HEADERS */
+.phase-header{display:flex;align-items:center;gap:8px;padding:10px 20px;background:linear-gradient(90deg,var(--gold-bg),transparent);border-left:3px solid var(--gold);margin:8px 0 4px}
+.phase-header span{font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.8px}
+
+/* CLIENT CARDS */
+.client-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+.client-card:hover{box-shadow:var(--shadow-lg)}
+.client-header{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer}
+.client-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:16px;color:#fff;flex-shrink:0}
+.client-info{flex:1;min-width:0}
+.client-name{font-size:15px;font-weight:600;color:var(--navy)}
+.client-meta{font-size:12px;color:var(--text2);margin-top:2px}
+.client-right{display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.status-pill{font-size:11px;padding:4px 12px;border-radius:20px;font-weight:600}
+.pill-active{background:var(--success-bg);color:var(--success)}
+.pill-new{background:var(--info-bg);color:var(--info)}
+.pill-review{background:var(--warning-bg);color:var(--warning)}
+.progress-wrap{display:flex;align-items:center;gap:6px}
+.progress-bar{width:72px;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--gold2))}
+.progress-pct{font-size:12px;color:var(--text2);font-weight:500}
+.chevron{color:var(--text3);transition:transform .2s;font-size:18px}
+.chevron.open{transform:rotate(180deg)}
+.card-body{display:none;border-top:1px solid var(--border)}.card-body.open{display:block}
+
+/* MILESTONES */
+.ms-list{padding:12px 20px;display:flex;flex-direction:column;gap:6px}
+.ms{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--cream)}
+.ms.ms-done{border-color:var(--success-border);background:var(--success-bg)}
+.ms.ms-active{border-color:var(--warning-border);background:var(--warning-bg)}
+.ms.ms-locked{opacity:.45}.ms.ms-optional{border-color:var(--info-border);background:var(--info-bg)}
+.ms-num{font-size:11px;color:var(--text3);font-weight:600;min-width:18px;text-align:center;padding-top:5px;flex-shrink:0;font-family:'DM Mono',monospace}
+.ms-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.ms-icon.done{background:var(--success-bg);color:var(--success)}.ms-icon.active{background:var(--warning-bg);color:var(--warning)}
+.ms-icon.optional{background:var(--info-bg);color:var(--info)}.ms-icon.locked{background:var(--border);color:var(--text3)}
+.ms-content{flex:1;min-width:0}
+.ms-title{font-size:13px;font-weight:600;color:var(--navy)}
+.ms-detail{font-size:12px;color:var(--text2);margin-top:2px}
+.ms-hash{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);margin-top:4px;word-break:break-all}
+.ms-actions{display:flex;gap:6px;margin-top:8px}
+.ms-btn{padding:5px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:#fff;color:var(--text);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500}
+.ms-btn.pass{border-color:var(--success-border);color:var(--success);background:var(--success-bg)}
+
+/* CHAIN BAR */
+.chain-bar{padding:12px 20px;background:var(--navy);border-top:1px solid rgba(255,255,255,.06)}
+.chain-label{color:rgba(255,255,255,.5);font-size:11px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.chain-blocks{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.chain-block{font-family:'DM Mono',monospace;font-size:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:3px 8px;color:rgba(255,255,255,.5)}
+.chain-arrow{color:var(--gold);font-size:11px}
+
+/* QR */
+.qr-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+@media(max-width:700px){.qr-grid{grid-template-columns:1fr}}
+.qr-action{background:#fff;border:2px solid var(--border);border-radius:var(--radius-xl);padding:32px;text-align:center;cursor:pointer;transition:all .2s}
+.qr-action:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.qr-action.checkin:hover{border-color:var(--success);background:var(--success-bg)}
+.qr-action.checkout:hover{border-color:var(--danger);background:var(--danger-bg)}
+.qr-icon{width:72px;height:72px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px}
+.qr-icon.in{background:var(--success-bg);color:var(--success)}.qr-icon.out{background:var(--danger-bg);color:var(--danger)}
+.qr-action h3{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:6px}
+.qr-action p{font-size:13px;color:var(--text2)}
+.qr-result{background:var(--navy);border-radius:var(--radius-lg);padding:24px;color:#fff;margin-bottom:20px;display:none}
+.qr-result.show{display:block}
+.qr-result h3{font-family:'DM Serif Display',serif;font-size:20px;color:var(--gold);margin-bottom:8px}
+.qr-result p{font-size:13px;color:rgba(255,255,255,.7);line-height:1.6}
+.qr-hash{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);margin-top:10px;word-break:break-all}
+
+/* SHIFT LOG */
+.shift-log{display:flex;flex-direction:column;gap:8px}
+.shift-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;border:1px solid var(--border);border-radius:var(--radius)}
+.shift-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.shift-dot.complete{background:var(--success)}.shift-dot.active{background:var(--gold)}
+.shift-worker{flex:1;min-width:0}
+.shift-worker-name{font-size:13px;font-weight:600;color:var(--navy)}
+.shift-client{font-size:12px;color:var(--text2);margin-top:1px}
+.shift-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--text2);text-align:right;flex-shrink:0}
+.shift-duration{font-size:11px;font-weight:600;color:var(--success);text-align:right}
+.shift-hash{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:2px}
+
+/* SDG DASHBOARD */
+.sdg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:700px){.sdg-grid{grid-template-columns:repeat(2,1fr)}}
+.sdg-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;text-align:center}
+.sdg-card-num{font-family:'DM Serif Display',serif;font-size:32px;font-weight:400;margin-bottom:4px}
+.sdg-card-label{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:4px;color:var(--text2)}
+
+/* MODALS */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,31,58,.6);z-index:1000;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-xl);padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(11,31,58,.2)}
+.modal h3{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mfr{margin-bottom:14px}
+.mfr label{font-size:12px;color:var(--text2);display:block;margin-bottom:6px;font-weight:600}
+.mfr input,.mfr select,.mfr textarea{width:100%;padding:10px 14px;border-radius:var(--radius);border:1.5px solid var(--border2);background:var(--cream);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.mfr textarea{resize:vertical;min-height:80px}
+.mfr input:focus,.mfr select:focus{border-color:var(--gold)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+.btn{padding:9px 18px;border-radius:var(--radius);border:1.5px solid var(--border2);background:#fff;color:var(--text);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:6px;font-weight:500}
+.btn.gold{background:linear-gradient(135deg,var(--gold),var(--gold2));border-color:var(--gold);color:var(--navy);font-weight:700}
+.add-btn{width:100%;padding:14px;border:2px dashed var(--border2);border-radius:var(--radius-lg);background:transparent;color:var(--text2);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.add-btn:hover{background:var(--cream);border-color:var(--gold);color:var(--gold)}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.toolbar input,.toolbar select{padding:9px 14px;border-radius:var(--radius);border:1.5px solid var(--border2);background:#fff;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.toolbar input{flex:1;min-width:180px}
+.toolbar input:focus,.toolbar select:focus{border-color:var(--gold)}
+
+/* BANNER */
+.info-banner{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:14px}
+.info-banner i{font-size:24px;color:var(--gold);flex-shrink:0}
+.info-banner-text h4{font-size:14px;font-weight:600;color:#fff;margin-bottom:2px}
+.info-banner-text p{font-size:12px;color:rgba(255,255,255,.6)}
+
+/* FAMILY VIEW */
+.family-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.family-stat{border-radius:var(--radius);padding:14px;text-align:center}
+.family-stat-val{font-family:'DM Serif Display',serif;font-size:28px;margin-bottom:2px}
+.family-stat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 24px;border-radius:var(--radius);font-size:13px;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:9999;box-shadow:var(--shadow-lg);border-left:3px solid var(--gold)}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty i{font-size:52px;color:var(--text3);display:block;margin-bottom:14px}
+.empty strong{font-family:'DM Serif Display',serif;font-size:18px;color:var(--navy);display:block;margin-bottom:8px}
+.loading{text-align:center;padding:48px;color:var(--text2);font-size:14px}
+.loading i{font-size:32px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;color:var(--gold)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div style="background:linear-gradient(90deg,#856404,#b8860b);color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;letter-spacing:.3px;position:relative;z-index:999">
+  ⚡ DEMONSTRATION MODE — Sample data only. No real client records.
+  <a href="https://atcpng.github.io/Australians-That-Care" style="color:#fff3cd;text-decoration:underline;margin-left:8px">Go to ATC student ledger →</a>
+</div>
+<div class="login-wrap" id="login-screen">
+  <div class="login-box">
+    <div class="login-mark"><i class="ti ti-heart-handshake"></i></div>
+    <h1>Doctors That Care</h1>
+    <p>Care Delivery Verification Ledger — DEMO VERSION</p>
+    <div class="role-grid">
+      <button class="role-btn selected" onclick="selectRole('manager')" id="role-manager"><i class="ti ti-clipboard-heart"></i><span>Clinical Manager</span></button>
+      <button class="role-btn" onclick="selectRole('worker')" id="role-worker"><i class="ti ti-user-heart"></i><span>Care Worker</span></button>
+      <button class="role-btn" onclick="selectRole('family')" id="role-family"><i class="ti ti-home-heart"></i><span>Family</span></button>
+      <button class="role-btn" onclick="selectRole('admin')" id="role-admin"><i class="ti ti-shield"></i><span>Admin</span></button>
+    </div>
+    <div class="form-row"><label>Password</label><input type="password" id="login-pw" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="login-btn" onclick="doLogin()">Sign in to DTC Ledger</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark"><i class="ti ti-heart-handshake"></i></div>
+      <h1>Doctors That Care</h1>
+      <p>Care Delivery Ledger</p>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+      <div class="nav-item" onclick="showPage('shifts')" id="nav-shifts"><i class="ti ti-clock"></i>Today's Shifts</div>
+      <div class="nav-section">Care Management</div>
+      <div class="nav-item" onclick="showPage('clients')" id="nav-clients"><i class="ti ti-users"></i>Clients</div>
+      <div class="nav-item" onclick="showPage('checkin')" id="nav-checkin"><i class="ti ti-qrcode"></i>Check In / Out</div>
+      <div class="nav-section">Impact</div>
+      <div class="nav-item" onclick="showPage('sdg')" id="nav-sdg"><i class="ti ti-leaf"></i>SDG Credits</div>
+      <div class="nav-item" onclick="showPage('chain')" id="nav-chain"><i class="ti ti-link"></i>Blockchain</div>
+      <div class="nav-item" onclick="showPage('family')" id="nav-family" style="display:none"><i class="ti ti-home-heart"></i>My Family Member</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div class="role-pill" id="role-label">Clinical Manager</div><div style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;background:rgba(201,168,76,.3);color:var(--gold2)">DEMO</div></div>
+      <button class="signout-btn" onclick="signOut()"><i class="ti ti-logout"></i> Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div class="page active" id="page-dashboard">
+      <div class="page-header"><h2>Care Delivery Dashboard</h2><p>Blockchain-verified aged care delivery</p></div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon"><i class="ti ti-users"></i></div><div class="stat-val" id="stat-clients">0</div><div class="stat-label">Active Clients</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="ti ti-clock"></i></div><div class="stat-val green" id="stat-shifts">0</div><div class="stat-label">Shifts Today</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="ti ti-leaf"></i></div><div class="stat-val gold" id="stat-credits">0</div><div class="stat-label">SDG Credits Issued</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="ti ti-link"></i></div><div class="stat-val" id="stat-blocks">0</div><div class="stat-label">Verified Blocks</div></div>
+      </div>
+      <div class="info-banner"><i class="ti ti-shield-check"></i><div class="info-banner-text"><h4>Blockchain-verified care delivery — separate from ATC student ledger</h4><p>Every care visit is SHA-256 hashed and chain-linked. SDG credits generated here are distinct from worker development credits.</p></div></div>
+      <div id="dashboard-recent"></div>
+    </div>
+
+    <div class="page" id="page-shifts">
+      <div class="page-header"><h2>Today's Shifts</h2><p>Real-time verified care delivery log</p></div>
+      <div class="card"><div class="card-title"><i class="ti ti-clock" style="color:var(--gold)"></i> Live shift log</div><div class="card-sub">Each shift SHA-256 verified on check-in and check-out</div><div class="shift-log" id="shift-log"></div></div>
+    </div>
+
+    <div class="page" id="page-clients">
+      <div class="page-header"><h2>Client Care Ledger</h2><p>Every client's verified care journey</p></div>
+      <div class="toolbar">
+        <input type="text" id="client-search" placeholder="Search name or suburb..." oninput="renderClients()">
+        <select id="client-filter" onchange="renderClients()"><option value="">All clients</option><option value="active">Active</option><option value="new">New</option><option value="review">Review due</option></select>
+        <span style="font-size:12px;color:var(--text3);padding:9px 0"><i class="ti ti-eye" style="margin-right:4px"></i>Demo — read only</span>
+      </div>
+      <div id="client-list"></div>
+    </div>
+
+    <div class="page" id="page-checkin">
+      <div class="page-header"><h2>Worker Check In / Out</h2><p>QR-verified care visit recording</p></div>
+      <div class="qr-result" id="qr-result"></div>
+      <div class="qr-grid">
+        <div class="qr-action checkin" onclick="simulateCheckin()">
+          <div class="qr-icon in"><i class="ti ti-qrcode"></i></div>
+          <h3>Check In — Demo</h3>
+          <p>In the live system, workers scan a QR code at the client's front door. Click to simulate a check-in.</p>
+          <div style="margin-top:16px"><span class="sdg sdg-3">SDG 3</span> <span class="sdg sdg-8">SDG 8</span> <span class="credit-pill">1 credit on checkout</span></div>
+        </div>
+        <div class="qr-action checkout" onclick="simulateCheckout()">
+          <div class="qr-icon out"><i class="ti ti-door-exit"></i></div>
+          <h3>Check Out — Demo</h3>
+          <p>Click to simulate a check-out. Duration calculated, SHA-256 hash generated, block sealed.</p>
+          <div style="margin-top:16px"><span class="sdg sdg-3">SDG 3</span> <span class="credit-pill">Shift block sealed</span></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-title"><i class="ti ti-history" style="color:var(--gold)"></i> Recent check-ins</div><div class="card-sub">Last verified shift blocks</div><div id="recent-checkins"></div></div>
+    </div>
+
+    <div class="page" id="page-sdg">
+      <div class="page-header"><h2>SDG Impact Credits — Care Side</h2><p>Credits generated by verified care delivery outcomes</p></div>
+      <div class="info-banner"><i class="ti ti-info-circle"></i><div class="info-banner-text"><h4>These credits are additional to worker development credits</h4><p>Worker development credits (80 per worker) are in the ATC student blockchain. Care delivery credits (up to 27 per client) are generated here under SDG 3, 8, 10 and 16.</p></div></div>
+      <div class="sdg-grid" id="sdg-grid"></div>
+      <div class="card"><div class="card-title"><i class="ti ti-list-check" style="color:var(--gold)"></i> Care milestone credit schedule</div><div class="card-sub">Credits per client across 13 milestones</div><div id="sdg-schedule"></div></div>
+    </div>
+
+    <div class="page" id="page-chain">
+      <div class="page-header"><h2>Blockchain Audit Trail</h2><p>Immutable care delivery verification chain</p></div>
+      <div class="card"><div class="card-title"><i class="ti ti-lock" style="color:var(--gold)"></i> Chain integrity</div><div class="card-sub">SHA-256 hash chain — every care event sealed and linked</div><div id="chain-display"></div></div>
+    </div>
+
+    <div class="page" id="page-family">
+      <div class="page-header"><h2>Care Delivery Record</h2><p>Verified care visits and programme progress for your family member</p></div>
+      <div id="family-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="client-modal">
+  <div class="modal">
+    <h3><i class="ti ti-user-plus" style="color:var(--gold)"></i> Add new client</h3>
+    <div class="form-grid">
+      <div class="mfr" style="grid-column:span 2"><label>Full name *</label><input id="c-name" placeholder="e.g. Margaret Thompson"></div>
+      <div class="mfr"><label>Age *</label><input id="c-age" type="number" min="60" max="105" placeholder="78"></div>
+      <div class="mfr"><label>Suburb *</label><input id="c-suburb" placeholder="e.g. Parramatta"></div>
+      <div class="mfr" style="grid-column:span 2"><label>Care type *</label><select id="c-caretype"><option>Aged care — Support at Home</option><option>Aged care — residential transition</option><option>NDIS — daily living support</option><option>Post-hospital discharge support</option><option>Dementia support</option></select></div>
+      <div class="mfr"><label>Assigned worker</label><input id="c-worker" placeholder="e.g. Mary Kila"></div>
+      <div class="mfr"><label>GP / referring doctor</label><input id="c-gp" placeholder="e.g. Dr Patel"></div>
+      <div class="mfr" style="grid-column:span 2"><label>Care notes</label><textarea id="c-notes" placeholder="Key care requirements, preferences, medical notes..."></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeClientModal()">Cancel</button>
+      <button class="btn gold" onclick="addClient()"><i class="ti ti-check"></i> Add client</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://cfckarzxrrwwhelftmag.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmY2thcnp4cnJ3d2hlbGZ0bWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjE2NDEsImV4cCI6MjA5NDc5NzY0MX0.YgkcpPvHHcMVHQP92snZT4I-dVjsm3L0_D4QgANjFhk';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const PASSWORDS={manager:'dtc2026',worker:'care2026',family:'family2026',admin:'admin2026'};
+const AVATARBG=['#0B3D6E','#1A5276','#117A65','#784212','#6C3483','#1B4F72'];
+
+const PHASES=[
+  {label:'Phase 1 — Assessment and Planning',icon:'ti-clipboard-list',range:[0,2]},
+  {label:'Phase 2 — Care Commencement',icon:'ti-heart-handshake',range:[3,5]},
+  {label:'Phase 3 — Ongoing Care and Reviews',icon:'ti-calendar-check',range:[6,9]},
+  {label:'Phase 4 — Outcomes and Independence',icon:'ti-award',range:[10,12]},
+];
+
+const CARE_MILESTONES=[
+  {id:0,title:'Client needs assessment completed',icon:'ti-clipboard-list',party:'DTC clinical manager',sdgs:[3,10],credits:2,optional:false},
+  {id:1,title:'Individualised care plan established',icon:'ti-file-text',party:'DTC clinical manager',sdgs:[3,10],credits:2,optional:false},
+  {id:2,title:'Worker assigned and briefed',icon:'ti-user-check',party:'DTC clinical manager',sdgs:[8],credits:1,optional:false},
+  {id:3,title:'First care visit delivered and verified',icon:'ti-home-heart',party:'Worker QR check-in/out',sdgs:[3,8],credits:2,optional:false},
+  {id:4,title:'Care routine established — 4 weeks',icon:'ti-repeat',party:'DTC clinical manager',sdgs:[3],credits:1,optional:false},
+  {id:5,title:'Family briefing completed',icon:'ti-users',party:'DTC clinical manager',sdgs:[3,10],credits:2,optional:false},
+  {id:6,title:'3-month care review — outcomes assessed',icon:'ti-chart-line',party:'DTC clinical manager',sdgs:[3,10],credits:2,optional:false},
+  {id:7,title:'Independent living maintained — 6 months',icon:'ti-home-check',party:'DTC clinical manager and ACSQHC',sdgs:[3,10],credits:3,optional:false},
+  {id:8,title:'Consumer satisfaction survey — positive result',icon:'ti-mood-smile',party:'Independent survey provider',sdgs:[3,16],credits:2,optional:false},
+  {id:9,title:'NDIS plan review supported',icon:'ti-file-certificate',party:'DTC and NDIS planner',sdgs:[3,10,16],credits:3,optional:true},
+  {id:10,title:'Hospital avoidance verified — 12 months',icon:'ti-building-hospital',party:'DTC and GP records',sdgs:[3,10],credits:3,optional:false},
+  {id:11,title:'Independent living maintained — 24 months',icon:'ti-home-check',party:'DTC clinical manager and ACSQHC',sdgs:[3,10],credits:3,optional:false},
+  {id:12,title:'Quality of life improvement verified',icon:'ti-heart',party:'Independent survey provider',sdgs:[3,10,16],credits:3,optional:false},
+];
+
+const TOTAL_MS=CARE_MILESTONES.length;
+const MAX_CREDITS=CARE_MILESTONES.reduce(function(a,m){return a+m.credits;},0);
+
+let clients=[
+  {id:'c1',name:'Margaret Thompson',age:82,suburb:'Parramatta',caretype:'Aged care — Support at Home',worker:'Mary Kila',gp:'Dr Patel',notes:'Dementia — early stage. Lives alone.',colorIdx:0,status:'active',doneUpTo:8,optionalDone:[9],
+    shifts:[{id:'s1',workerName:'Mary Kila',timeIn:'08:02',timeOut:'10:48',duration:'2h 46m',date:'Today',hash:'a3f8b2d1'},{id:'s2',workerName:'Mary Kila',timeIn:'08:05',timeOut:'10:52',duration:'2h 47m',date:'Yesterday',hash:'b4e9c3a2'}]},
+  {id:'c2',name:'Ronald Patterson',age:76,suburb:'Blacktown',caretype:'Post-hospital discharge support',worker:'Rose Bari',gp:'Dr Singh',notes:'Hip replacement recovery.',colorIdx:1,status:'active',doneUpTo:5,optionalDone:[],
+    shifts:[{id:'s3',workerName:'Rose Bari',timeIn:'09:15',timeOut:'11:30',duration:'2h 15m',date:'Today',hash:'c5f0d4b3'}]},
+  {id:'c3',name:'Dorothy Chen',age:91,suburb:'Strathfield',caretype:'Aged care — Support at Home',worker:'John Tapi',gp:'Dr Williams',notes:'Mobility issues. Full personal care.',colorIdx:2,status:'review',doneUpTo:2,optionalDone:[],
+    shifts:[{id:'s4',workerName:'John Tapi',timeIn:'07:45',timeOut:'10:15',duration:'2h 30m',date:'Today',hash:'d6a1f5c8'},{id:'s5',workerName:'John Tapi',timeIn:'07:50',timeOut:'10:20',duration:'2h 30m',date:'Yesterday',hash:'e7b2g6d9'}]},
+];
+
+let currentRole=null, openCards={}, activeCheckin=null;
+
+async function sha256(str){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('').slice(0,16);
+}
+
+function fakeHash(seed){
+  var h=0;
+  for(var i=0;i<seed.length;i++){h=((h<<5)-h)+seed.charCodeAt(i);h|=0;}
+  return Math.abs(h).toString(16).padStart(8,'0')+'c7d2e9f1';
+}
+
+function initials(n){return n.split(' ').filter(Boolean).map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();}
+
+function getProgress(c){
+  var req=CARE_MILESTONES.filter(function(m){return !m.optional;}).length;
+  var done=CARE_MILESTONES.filter(function(m,i){return !m.optional&&i<=c.doneUpTo;}).length;
+  return Math.round((done/req)*100);
+}
+
+function getTotalCredits(c){
+  return CARE_MILESTONES.reduce(function(acc,m,i){
+    if(i<=c.doneUpTo||c.optionalDone.indexOf(i)>-1) return acc+m.credits;
+    return acc;
+  },0);
+}
+
+function sdgBadges(sdgs,credits){
+  var badges=sdgs.map(function(n){return '<span class="sdg sdg-'+n+'">SDG '+n+'</span>';}).join('');
+  return '<div class="sdg-badges">'+badges+'<span class="credit-pill">'+credits+' credit'+(credits!==1?'s':'')+'</span></div>';
+}
+
+function selectRole(r){
+  currentRole=r;
+  document.querySelectorAll('.role-btn').forEach(function(b){b.classList.remove('selected');});
+  document.getElementById('role-'+r).classList.add('selected');
+}
+
+function doLogin(){
+  var pw=document.getElementById('login-pw').value;
+  var err=document.getElementById('login-err');
+  if(!currentRole){err.textContent='Please select a role';return;}
+  if(!pw){err.textContent='Please enter any password';return;}
+  // Demo mode — any password accepted
+  err.textContent='';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  var labels={manager:'Clinical Manager',worker:'Care Worker',family:'Family Member',admin:'Admin'};
+  document.getElementById('role-label').textContent=labels[currentRole]||'Admin';
+  initApp();
+}
+
+function signOut(){
+  currentRole=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-pw').value='';
+  // Reset nav visibility
+  document.querySelectorAll('.nav-item,.nav-section').forEach(function(n){n.style.display='';});
+  document.getElementById('nav-family').style.display='none';
+}
+
+function initApp(){
+  if(currentRole==='family'){
+    // Hide all nav, show only family page link
+    document.querySelectorAll('#sidebar-nav .nav-item, #sidebar-nav .nav-section').forEach(function(n){n.style.display='none';});
+    document.getElementById('nav-family').style.display='flex';
+    showPage('family');
+  } else {
+    renderDashboard();
+    renderClients();
+  }
+}
+
+function toast(msg,ok){
+  if(ok===undefined) ok=true;
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.borderLeftColor=ok?'var(--gold)':'var(--danger)';
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},3200);
+}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  var page=document.getElementById('page-'+id);
+  if(page) page.classList.add('active');
+  var navItem=document.getElementById('nav-'+id);
+  if(navItem) navItem.classList.add('active');
+  if(id==='clients') renderClients();
+  if(id==='shifts') renderShifts();
+  if(id==='checkin') renderRecentCheckins();
+  if(id==='sdg') renderSdgPage();
+  if(id==='chain') renderChain();
+  if(id==='family') renderFamilyView();
+}
+
+function openModal(){document.getElementById('client-modal').classList.add('open');}
+function closeClientModal(){document.getElementById('client-modal').classList.remove('open');}
+document.getElementById('client-modal').addEventListener('click',function(e){if(e.target===document.getElementById('client-modal'))closeClientModal();});
+
+function renderDashboard(){
+  document.getElementById('stat-clients').textContent=clients.length;
+  var todayShifts=clients.reduce(function(a,c){return a.concat(c.shifts.filter(function(s){return s.date==='Today';}));}, []);
+  document.getElementById('stat-shifts').textContent=todayShifts.length;
+  document.getElementById('stat-credits').textContent=clients.reduce(function(a,c){return a+getTotalCredits(c);},0);
+  document.getElementById('stat-blocks').textContent=clients.reduce(function(a,c){return a+(c.doneUpTo+1+c.optionalDone.length+c.shifts.length);},0);
+  var html='<div class="card"><div class="card-title"><i class="ti ti-activity" style="color:var(--gold)"></i> Recent activity</div><div class="card-sub">Latest verified care events</div><div class="shift-log">';
+  if(todayShifts.length){
+    todayShifts.forEach(function(s){
+      var cl=clients.find(function(c){return c.shifts.indexOf(s)>-1;});
+      html+='<div class="shift-row"><div class="shift-dot complete"></div><div class="shift-worker"><div class="shift-worker-name">'+s.workerName+'</div><div class="shift-client">'+(cl?cl.name:'')+' · '+(cl?cl.suburb:'')+'</div></div><div><div class="shift-time">'+s.timeIn+' to '+s.timeOut+'</div><div class="shift-duration">'+s.duration+' verified</div><div class="shift-hash">'+s.hash+'</div></div></div>';
+    });
+  } else {
+    html+='<div class="empty"><i class="ti ti-clock"></i><strong>No shifts today yet</strong></div>';
+  }
+  html+='</div></div>';
+  document.getElementById('dashboard-recent').innerHTML=html;
+}
+
+function renderShifts(){
+  var allShifts=clients.reduce(function(a,c){return a.concat(c.shifts.map(function(s){return Object.assign({},s,{clientName:c.name,suburb:c.suburb});}));}, []);
+  var log=document.getElementById('shift-log');
+  if(!allShifts.length){log.innerHTML='<div class="empty"><i class="ti ti-clock"></i><strong>No shifts recorded yet</strong></div>';return;}
+  log.innerHTML=allShifts.map(function(s){
+    return '<div class="shift-row"><div class="shift-dot complete"></div><div class="shift-worker"><div class="shift-worker-name">'+s.workerName+'</div><div class="shift-client">'+s.clientName+' · '+s.suburb+' · '+s.date+'</div></div><div><div class="shift-time">'+s.timeIn+' to '+s.timeOut+'</div><div class="shift-duration">'+s.duration+' verified</div><div class="shift-hash">'+s.hash+'</div></div></div>';
+  }).join('');
+}
+
+function renderClients(){
+  var q=(document.getElementById('client-search')||{value:''}).value.toLowerCase();
+  var f=(document.getElementById('client-filter')||{value:''}).value;
+  var filtered=clients.filter(function(c){
+    if(f&&c.status!==f) return false;
+    if(q&&c.name.toLowerCase().indexOf(q)<0&&c.suburb.toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  var list=document.getElementById('client-list');
+  if(!list) return;
+  if(!filtered.length){list.innerHTML='<div class="empty"><i class="ti ti-users"></i><strong>'+(clients.length?'No clients match':'No clients enrolled yet')+'</strong></div>';return;}
+  list.innerHTML=filtered.map(function(c){
+    var pct=getProgress(c),cr=getTotalCredits(c),st=c.status||'active';
+    var pillC=st==='active'?'pill-active':st==='new'?'pill-new':'pill-review';
+    var pillT=st==='active'?'Active':st==='new'?'New':'Review due';
+    var isOpen=openCards[c.id];
+    var bg=AVATARBG[c.colorIdx||0];
+    return '<div class="client-card">'+
+      '<div class="client-header" data-cid="'+c.id+'" onclick="toggleCard(this.dataset.cid)">'+
+        '<div class="client-avatar" style="background:'+bg+'">'+initials(c.name)+'</div>'+
+        '<div class="client-info"><div class="client-name">'+c.name+'</div><div class="client-meta">Age '+c.age+' · '+c.suburb+' · Worker: '+c.worker+'</div></div>'+
+        '<div class="client-right">'+
+          '<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div><span class="progress-pct">'+pct+'%</span></div>'+
+          '<span class="credit-pill">'+cr+' / '+MAX_CREDITS+' cr</span>'+
+          '<span class="status-pill '+pillC+'">'+pillT+'</span>'+
+          '<i class="ti ti-chevron-down chevron '+(isOpen?'open':'')+'"></i>'+
+        '</div>'+
+      '</div>'+
+      '<div class="card-body '+(isOpen?'open':'')+'">'+
+        '<div class="ms-list">'+renderMilestones(c)+'</div>'+
+        renderChainBar(c)+
+      '</div>'+
+    '</div>';
+  }).join('')+'';
+}
+
+function renderMilestones(c){
+  var html='';
+  PHASES.forEach(function(ph){
+    html+='<div class="phase-header"><i class="ti '+ph.icon+'" style="font-size:14px;color:var(--gold)"></i><span>'+ph.label+'</span></div>';
+    for(var i=ph.range[0];i<=ph.range[1];i++){
+      var def=CARE_MILESTONES[i];
+      var isDone=i<=c.doneUpTo||c.optionalDone.indexOf(i)>-1;
+      var isNext=i===c.doneUpTo+1&&!def.optional;
+      var sc=isDone?'ms-done':isNext?'ms-active':def.optional?'ms-optional':'ms-locked';
+      var ic=isDone?'done':isNext?'active':def.optional?'optional':'locked';
+      var ii=isDone?'ti-check':isNext?'ti-clock':def.optional?'ti-minus':'ti-lock';
+      var hash=isDone?fakeHash(c.id+'-'+i):null;
+      var detail=isDone?'Verified · '+def.party:'Pending · '+def.party;
+      var hashLine=hash?'<div class="ms-hash"><i class="ti ti-link" style="font-size:9px"></i> '+hash+' prev: '+fakeHash(c.id+'-'+(i-1)).slice(0,10)+'...</div>':'';
+      var actions='';
+      if(isNext){
+        actions='<div style="margin-top:6px;font-size:11px;color:var(--warning);background:var(--warning-bg);padding:6px 10px;border-radius:6px;border:1px solid var(--warning-border)"><i class="ti ti-lock" style="font-size:11px"></i> Next milestone — awaiting verification in live system</div>';
+      }
+      html+='<div class="ms '+sc+'">'+
+        '<span class="ms-num">'+(i+1)+'</span>'+
+        '<div class="ms-icon '+ic+'"><i class="ti '+ii+'"></i></div>'+
+        '<div class="ms-content">'+
+          '<div class="ms-title"><i class="ti '+def.icon+'" style="font-size:12px;margin-right:4px"></i>'+def.title+'</div>'+
+          '<div class="ms-detail">'+detail+'</div>'+
+          sdgBadges(def.sdgs,def.credits)+
+          hashLine+actions+
+        '</div>'+
+      '</div>';
+    }
+  });
+  return html;
+}
+
+function renderChainBar(c){
+  var chain=CARE_MILESTONES.filter(function(_,i){return i<=c.doneUpTo||c.optionalDone.indexOf(i)>-1;});
+  if(!chain.length) return '';
+  var cr=getTotalCredits(c);
+  var blocks=chain.map(function(m,i){
+    return (i>0?'<span class="chain-arrow">to</span>':'')+
+      '<span class="chain-block">#'+m.id+' '+fakeHash(c.id+'-'+m.id)+'</span>';
+  }).join('');
+  return '<div class="chain-bar"><div class="chain-label"><i class="ti ti-link"></i> Verified chain · '+chain.length+' blocks · '+cr+' SDG credits · '+c.shifts.length+' shift records</div><div class="chain-blocks">'+blocks+'</div></div>';
+}
+
+function toggleCard(id){openCards[id]=!openCards[id];renderClients();}
+
+function verifyMilestone(cid,mid){
+  var c=clients.find(function(x){return x.id===cid;});
+  var def=CARE_MILESTONES[mid];
+  if(def.optional){if(c.optionalDone.indexOf(mid)<0)c.optionalDone.push(mid);}
+  else{c.doneUpTo=mid;}
+  toast('Milestone '+(mid+1)+' verified — '+def.credits+' SDG credit'+(def.credits!==1?'s':'')+' earned');
+  renderClients();
+  renderDashboard();
+}
+
+function simulateCheckin(){
+  var now=new Date();
+  var timeStr=now.toTimeString().slice(0,5);
+  var worker=clients[0].worker;
+  var client=clients[0];
+  sha256(worker+client.id+timeStr+Math.random()).then(function(hash){
+    activeCheckin={worker:worker,client:client.name,timeIn:timeStr,hash:hash};
+    var res=document.getElementById('qr-result');
+    res.className='qr-result show';
+    res.innerHTML='<h3><i class="ti ti-qrcode" style="margin-right:8px"></i>Check-in recorded</h3>'+
+      '<p><strong>Worker:</strong> '+worker+'<br><strong>Client:</strong> '+client.name+' · '+client.suburb+'<br><strong>Time in:</strong> '+timeStr+'</p>'+
+      '<div class="qr-hash">Block hash: '+hash+'</div>';
+    toast(worker+' checked in at '+client.name+' home');
+    renderRecentCheckins();
+  });
+}
+
+function simulateCheckout(){
+  if(!activeCheckin){toast('No active check-in — scan check-in first',false);return;}
+  var now=new Date();
+  var timeStr=now.toTimeString().slice(0,5);
+  sha256(activeCheckin.worker+activeCheckin.client+timeStr+activeCheckin.hash).then(function(hash){
+    var res=document.getElementById('qr-result');
+    res.innerHTML='<h3><i class="ti ti-circle-check" style="margin-right:8px"></i>Shift sealed on blockchain</h3>'+
+      '<p><strong>Worker:</strong> '+activeCheckin.worker+'<br><strong>Client:</strong> '+activeCheckin.client+'<br><strong>Time:</strong> '+activeCheckin.timeIn+' to '+timeStr+'<br><strong>SDG 3 and SDG 8 credits earned</strong></p>'+
+      '<div class="qr-hash">Block hash: '+hash+' previous: '+activeCheckin.hash.slice(0,10)+'...</div>';
+    toast('Shift block sealed — 1 SDG credit earned');
+    activeCheckin=null;
+    renderRecentCheckins();
+  });
+}
+
+function renderRecentCheckins(){
+  var allShifts=clients.reduce(function(a,c){return a.concat(c.shifts.map(function(s){return Object.assign({},s,{clientName:c.name,suburb:c.suburb});}));}, []);
+  document.getElementById('recent-checkins').innerHTML=allShifts.length?allShifts.map(function(s){
+    return '<div class="shift-row"><div class="shift-dot complete"></div><div class="shift-worker"><div class="shift-worker-name">'+s.workerName+' to '+s.clientName+'</div><div class="shift-client">'+s.suburb+' · '+s.date+' · '+s.timeIn+' to '+s.timeOut+'</div></div><div><div class="shift-duration">'+s.duration+' verified</div><div class="shift-hash">'+s.hash+'</div></div></div>';
+  }).join(''):'<div class="empty"><i class="ti ti-clock"></i><strong>No shifts yet</strong></div>';
+}
+
+function renderSdgPage(){
+  var sdgMeta={3:{name:'Good Health',color:'#4c9f38'},8:{name:'Decent Work',color:'#a21942'},10:{name:'Reduced Inequalities',color:'#dd1367'},16:{name:'Strong Institutions',color:'#00689d'}};
+  var sdgCounts={3:0,8:0,10:0,16:0};
+  clients.forEach(function(c){
+    CARE_MILESTONES.forEach(function(m,i){
+      if(i<=c.doneUpTo||c.optionalDone.indexOf(i)>-1){
+        m.sdgs.forEach(function(s){sdgCounts[s]=(sdgCounts[s]||0)+m.credits;});
+      }
+    });
+  });
+  document.getElementById('sdg-grid').innerHTML=Object.keys(sdgMeta).map(function(k){
+    var v=sdgMeta[k];
+    return '<div class="sdg-card" style="border-top:3px solid '+v.color+'">'+
+      '<div class="sdg-card-num" style="color:'+v.color+'">'+(sdgCounts[k]||0)+'</div>'+
+      '<span class="sdg sdg-'+k+'">SDG '+k+'</span>'+
+      '<div class="sdg-card-label">'+v.name+'</div>'+
+    '</div>';
+  }).join('');
+  var rows=CARE_MILESTONES.map(function(m,i){
+    var cnt=clients.filter(function(c){return c.doneUpTo>=i||c.optionalDone.indexOf(i)>-1;}).length;
+    return '<tr style="background:'+(i%2===0?'var(--cream)':'#fff')+'">'+
+      '<td style="padding:8px 14px;font-family:DM Mono,monospace;color:var(--text3)">'+(i+1)+'</td>'+
+      '<td style="padding:8px 14px;font-weight:500">'+m.title+(m.optional?' (optional)':'')+'</td>'+
+      '<td style="padding:8px 14px;text-align:center">'+m.sdgs.map(function(s){return '<span class="sdg sdg-'+s+'">SDG '+s+'</span>';}).join(' ')+'</td>'+
+      '<td style="padding:8px 14px;text-align:center"><span class="credit-pill">'+m.credits+' cr</span></td>'+
+      '<td style="padding:8px 14px;text-align:center;font-weight:600;color:var(--success)">'+cnt+'</td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('sdg-schedule').innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--navy);color:#fff"><th style="padding:10px 14px;text-align:left">#</th><th style="padding:10px 14px;text-align:left">Milestone</th><th style="padding:10px 14px;text-align:center">SDGs</th><th style="padding:10px 14px;text-align:center">Credits</th><th style="padding:10px 14px;text-align:center">Verified</th></tr></thead><tbody>'+rows+'<tr style="background:var(--navy)"><td colspan="3" style="padding:10px 14px;color:#fff;font-weight:700">TOTAL per client (full journey)</td><td style="padding:10px 14px;text-align:center;color:var(--gold);font-weight:700">'+MAX_CREDITS+' cr</td><td></td></tr></tbody></table>';
+}
+
+function renderChain(){
+  var allBlocks=clients.reduce(function(a,c){
+    var ms=CARE_MILESTONES.filter(function(_,i){return i<=c.doneUpTo||c.optionalDone.indexOf(i)>-1;}).map(function(m){
+      return {clientName:c.name,title:m.title,hash:fakeHash(c.id+'-'+m.id),credits:m.credits};
+    });
+    var sh=c.shifts.map(function(s){return {clientName:c.name,title:'Shift: '+s.workerName,hash:s.hash,credits:0};});
+    return a.concat(ms,sh);
+  },[]);
+  var total=allBlocks.length;
+  var totalCr=allBlocks.reduce(function(a,b){return a+b.credits;},0);
+  var blockHtml=allBlocks.slice(0,12).map(function(b,i){
+    return (i>0?'<span class="chain-arrow">to</span>':'')+
+      '<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 10px" title="'+b.title+' - '+b.clientName+'">'+
+        '<div style="font-family:DM Mono,monospace;font-size:9px;color:var(--gold)">'+b.hash+'</div>'+
+        '<div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px">'+b.clientName.split(' ')[0]+'</div>'+
+      '</div>';
+  }).join('');
+  document.getElementById('chain-display').innerHTML=
+    '<div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap">'+
+      '<div style="background:var(--navy);border-radius:var(--radius);padding:14px 20px;color:#fff;flex:1;min-width:120px"><div style="font-family:DM Serif Display,serif;font-size:28px;color:var(--gold)">'+total+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px">Total blocks</div></div>'+
+      '<div style="background:var(--navy);border-radius:var(--radius);padding:14px 20px;color:#fff;flex:1;min-width:120px"><div style="font-family:DM Serif Display,serif;font-size:28px;color:var(--gold)">'+totalCr+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px">SDG credits</div></div>'+
+      '<div style="background:var(--navy);border-radius:var(--radius);padding:14px 20px;color:#fff;flex:1;min-width:120px"><div style="font-family:DM Serif Display,serif;font-size:28px;color:var(--gold)">'+clients.length+'</div><div style="font-size:11px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px">Clients on chain</div></div>'+
+    '</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:16px;background:var(--navy);border-radius:var(--radius-lg)">'+blockHtml+
+      (allBlocks.length>12?'<span class="chain-arrow">to</span><span class="chain-block">+'+(allBlocks.length-12)+' more</span>':'')+
+    '</div>';
+}
+
+function renderFamilyView(){
+  var c=clients[0]; // Demo: Margaret Thompson — production: linked to family account
+  var pct=getProgress(c);
+  var bg=AVATARBG[c.colorIdx||0];
+  var todayShifts=c.shifts.filter(function(s){return s.date==='Today';});
+  var allShifts=c.shifts;
+  var completedMs=CARE_MILESTONES.filter(function(_,i){return i<=c.doneUpTo||c.optionalDone.indexOf(i)>-1;});
+  var nextMs=c.doneUpTo+1<TOTAL_MS?CARE_MILESTONES[c.doneUpTo+1]:null;
+
+  var shiftsHtml='';
+  if(todayShifts.length){
+    shiftsHtml=todayShifts.map(function(s){
+      return '<div class="shift-row" style="margin-bottom:8px">'+
+        '<div class="shift-dot complete"></div>'+
+        '<div class="shift-worker"><div class="shift-worker-name">'+s.workerName+' arrived</div><div class="shift-client">Care delivered at home</div></div>'+
+        '<div><div class="shift-time">'+s.timeIn+' to '+s.timeOut+'</div><div class="shift-duration">'+s.duration+' verified</div>'+
+        '<div style="font-family:DM Mono,monospace;font-size:9px;color:var(--text3)"><i class="ti ti-shield-check" style="font-size:9px;color:var(--success)"></i> '+s.hash+'</div></div>'+
+      '</div>';
+    }).join('');
+  } else {
+    shiftsHtml='<div style="padding:16px;text-align:center;color:var(--text2);font-size:13px">No visits scheduled today</div>';
+  }
+
+  var historyHtml=allShifts.length?allShifts.map(function(s){
+    return '<div class="shift-row" style="margin-bottom:6px">'+
+      '<div class="shift-dot complete"></div>'+
+      '<div class="shift-worker"><div class="shift-worker-name">'+s.workerName+'</div><div class="shift-client">'+s.date+' · Home visit</div></div>'+
+      '<div><div class="shift-time">'+s.timeIn+' to '+s.timeOut+'</div><div class="shift-duration">'+s.duration+' verified</div></div>'+
+    '</div>';
+  }).join(''):'<div style="padding:16px;text-align:center;color:var(--text2)">No visits yet</div>';
+
+  var msHtml=CARE_MILESTONES.map(function(m,i){
+    var done=i<=c.doneUpTo||c.optionalDone.indexOf(i)>-1;
+    var isNext=i===c.doneUpTo+1&&!m.optional;
+    var sc=done?'ms-done':isNext?'ms-active':'ms-locked';
+    var ic=done?'done':isNext?'active':'locked';
+    var ii=done?'ti-check':isNext?'ti-clock':'ti-lock';
+    return '<div class="ms '+sc+'" style="margin-bottom:6px">'+
+      '<span class="ms-num" style="font-family:DM Mono,monospace;font-size:11px;color:var(--text3);min-width:18px;text-align:center;padding-top:5px;flex-shrink:0">'+(i+1)+'</span>'+
+      '<div class="ms-icon '+ic+'"><i class="ti '+ii+'"></i></div>'+
+      '<div class="ms-content">'+
+        '<div class="ms-title">'+m.title+(m.optional?' (if applicable)':'')+'</div>'+
+        '<div class="ms-detail" style="font-size:12px;color:var(--text2);margin-top:2px">'+(done?'Completed and verified':isNext?'In progress':'Upcoming')+'</div>'+
+        (done?'<div style="font-family:DM Mono,monospace;font-size:10px;color:var(--text3);margin-top:3px"><i class="ti ti-shield-check" style="font-size:9px;color:var(--success)"></i> Blockchain verified</div>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  var nextHtml=nextMs?
+    '<div style="background:var(--navy);border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:20px">'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Next milestone</div>'+
+      '<div style="font-family:DM Serif Display,serif;font-size:18px;color:var(--gold);margin-bottom:4px">'+nextMs.title+'</div>'+
+      '<div style="font-size:12px;color:rgba(255,255,255,.5)">Verified by: '+nextMs.party+'</div>'+
+    '</div>':'';
+
+  document.getElementById('family-content').innerHTML=
+    '<div class="card" style="border-top:4px solid var(--gold)">'+
+      '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">'+
+        '<div style="width:56px;height:56px;border-radius:50%;background:'+bg+';display:flex;align-items:center;justify-content:center;font-family:DM Serif Display,serif;font-size:20px;color:#fff;flex-shrink:0">'+initials(c.name)+'</div>'+
+        '<div><div style="font-family:DM Serif Display,serif;font-size:22px;color:var(--navy)">'+c.name+'</div>'+
+        '<div style="font-size:13px;color:var(--text2);margin-top:2px">Age '+c.age+' · '+c.suburb+' · '+c.caretype+'</div>'+
+        '<div style="font-size:12px;color:var(--text2);margin-top:2px">Care worker: <strong>'+c.worker+'</strong></div></div>'+
+      '</div>'+
+      '<div class="family-stat-grid">'+
+        '<div class="family-stat" style="background:var(--success-bg);border:1px solid var(--success-border)"><div class="family-stat-val" style="color:var(--success)">'+completedMs.length+'</div><div class="family-stat-label" style="color:var(--success)">Milestones met</div></div>'+
+        '<div class="family-stat" style="background:var(--info-bg);border:1px solid var(--info-border)"><div class="family-stat-val" style="color:var(--info)">'+allShifts.length+'</div><div class="family-stat-label" style="color:var(--info)">Verified visits</div></div>'+
+        '<div class="family-stat" style="background:var(--gold-bg);border:1px solid var(--gold-border)"><div class="family-stat-val" style="color:var(--gold)">'+pct+'%</div><div class="family-stat-label" style="color:var(--gold)">Programme</div></div>'+
+      '</div>'+
+    '</div>'+
+
+    '<div class="card">'+
+      '<div class="card-title"><i class="ti ti-clock" style="color:var(--gold)"></i> Today\'s care visits</div>'+
+      '<div class="card-sub">Every visit blockchain-verified — timestamped and sealed on arrival and departure</div>'+
+      shiftsHtml+
+    '</div>'+
+
+    '<div class="card">'+
+      '<div class="card-title"><i class="ti ti-history" style="color:var(--gold)"></i> Visit history</div>'+
+      '<div class="card-sub">Complete record of all verified care visits</div>'+
+      historyHtml+
+    '</div>'+
+
+    '<div class="card">'+
+      '<div class="card-title"><i class="ti ti-list-check" style="color:var(--gold)"></i> Care programme milestones</div>'+
+      '<div class="card-sub">Your family member\'s care journey — each milestone independently verified and blockchain-sealed</div>'+
+      msHtml+
+    '</div>'+
+
+    nextHtml+
+
+    '<div class="footer"><strong>Doctors That Care</strong> · DEMO — read only · Care delivery verified by blockchain<br>'+
+    '<span><a href="https://atcpng.github.io/Australians-That-Care" style="color:var(--info)">View ATC student ledger →</a></span></div>';
+}
+
+function openClientModal(){document.getElementById('client-modal').classList.add('open');}
+
+function addClient(){
+  var name=document.getElementById('c-name').value.trim();
+  var age=parseInt(document.getElementById('c-age').value);
+  var suburb=document.getElementById('c-suburb').value.trim();
+  var caretype=document.getElementById('c-caretype').value;
+  var worker=document.getElementById('c-worker').value.trim();
+  var gp=document.getElementById('c-gp').value.trim();
+  var notes=document.getElementById('c-notes').value.trim();
+  if(!name||!age||!suburb){toast('Please fill all required fields',false);return;}
+  var id='c'+Date.now();
+  clients.push({id:id,name:name,age:age,suburb:suburb,caretype:caretype,worker:worker||'Unassigned',gp:gp||'',notes:notes,colorIdx:Math.floor(Math.random()*AVATARBG.length),status:'new',doneUpTo:-1,optionalDone:[],shifts:[]});
+  closeClientModal();
+  toast(name+' added to care ledger');
+  ['c-name','c-age','c-suburb','c-worker','c-gp','c-notes'].forEach(function(id){document.getElementById(id).value='';});
+  renderClients();
+  renderDashboard();
+}
+</script>
+</body>
+</html>
