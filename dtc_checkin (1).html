@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DTC Care — Worker Check In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --navy:#0B1F3A;--gold:#C9A84C;--gold2:#E8C76A;
+  --ok:#1A7A4A;--ok-bg:#E8F5EE;--ok-b:#A3D4B8;
+  --err:#C0392B;--err-bg:#FDECEA;--err-b:#F1A89A;
+  --warn:#B8540A;--warn-bg:#FEF3E8;--warn-b:#F0BC80;
+  --text:#0B1F3A;--text2:#4A6080;--text3:#8BA0B8;
+  --border:#D4E0EC;--cream:#FAFAF7;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;min-height:100vh;position:relative}
+
+/* Background pattern */
+body::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(201,168,76,.12),transparent),radial-gradient(ellipse 60% 80% at 100% 100%,rgba(201,168,76,.06),transparent)}
+
+/* LOADING STATE */
+.loading-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10}
+.loading-mark{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:20px;box-shadow:0 8px 24px rgba(201,168,76,.35)}
+.loading-screen h1{font-family:'DM Serif Display',serif;font-size:26px;color:#fff;margin-bottom:6px;text-align:center}
+.loading-screen p{font-size:13px;color:rgba(255,255,255,.5);text-align:center;margin-bottom:28px}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--gold);border-radius:50%;animation:spin 0.9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* MAIN APP */
+.app{width:100%;max-width:400px;display:none;flex-direction:column;align-items:center;position:relative;z-index:1}
+
+/* HEADER */
+.app-header{text-align:center;margin-bottom:28px}
+.dtc-mark{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px;box-shadow:0 6px 20px rgba(201,168,76,.35)}
+.dtc-mark svg{width:28px;height:28px;fill:var(--navy)}
+.app-header h1{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:4px}
+.app-header p{font-size:12px;color:rgba(255,255,255,.45)}
+
+/* CLIENT CARD */
+.client-card{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:18px 20px;margin-bottom:22px;display:flex;align-items:center;gap:14px}
+.client-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:17px;color:#fff;flex-shrink:0;font-weight:400}
+.client-info{flex:1;min-width:0}
+.client-name{font-size:15px;font-weight:600;color:#fff;margin-bottom:2px}
+.client-sub{font-size:12px;color:rgba(255,255,255,.5)}
+.client-type{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;background:rgba(201,168,76,.15);color:var(--gold);margin-top:4px;display:inline-block}
+
+/* GPS STATUS */
+.gps-row{width:100%;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;margin-bottom:18px;font-size:12px;font-weight:500}
+.gps-row.ok{background:rgba(26,122,74,.15);border:1px solid rgba(26,122,74,.25);color:#4ade80}
+.gps-row.checking{background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold)}
+.gps-row.warn{background:rgba(184,84,10,.15);border:1px solid rgba(184,84,10,.25);color:#fb923c}
+.gps-row.err{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.25);color:#f87171}
+.gps-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.gps-dot.ok{background:#4ade80;animation:gpspulse 2s infinite}
+.gps-dot.checking{background:var(--gold);animation:gpspulse 1s infinite}
+.gps-dot.warn{background:#fb923c}
+.gps-dot.err{background:#f87171}
+@keyframes gpspulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ACTION BUTTONS */
+.action-btn{width:100%;padding:22px;border-radius:20px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:12px;transition:all .18s;margin-bottom:12px;position:relative;overflow:hidden;letter-spacing:.3px}
+.action-btn:active{transform:scale(.97)}
+.action-btn.checkin{background:linear-gradient(135deg,#1A7A4A,#22a85e);color:#fff;box-shadow:0 8px 28px rgba(26,122,74,.4)}
+.action-btn.checkin:hover{box-shadow:0 10px 36px rgba(26,122,74,.5)}
+.action-btn.checkout{background:linear-gradient(135deg,#C0392B,#e74c3c);color:#fff;box-shadow:0 8px 28px rgba(192,57,43,.4)}
+.action-btn.checkout:hover{box-shadow:0 10px 36px rgba(192,57,43,.5)}
+.action-btn.disabled{background:rgba(255,255,255,.1);color:rgba(255,255,255,.3);cursor:not-allowed;box-shadow:none}
+.action-btn .btn-icon{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.action-btn .btn-text{text-align:left}
+.action-btn .btn-label{display:block;font-size:17px}
+.action-btn .btn-sub{display:block;font-size:11px;opacity:.75;font-weight:400;margin-top:1px}
+.action-btn.loading-state{pointer-events:none;opacity:.7}
+
+/* ACTIVE SHIFT INDICATOR */
+.active-shift{width:100%;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.25);border-radius:14px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.active-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);animation:gpspulse 1.5s infinite;flex-shrink:0}
+.active-info{flex:1}
+.active-label{font-size:12px;font-weight:600;color:var(--gold)}
+.active-time{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;font-family:'DM Mono',monospace}
+
+/* SUCCESS SCREEN */
+.success-screen{width:100%;display:none;flex-direction:column;align-items:center;text-align:center}
+.success-icon{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;animation:popIn .4s cubic-bezier(.175,.885,.32,1.275)}
+.success-icon.in{background:linear-gradient(135deg,var(--ok),#22a85e);box-shadow:0 8px 28px rgba(26,122,74,.5)}
+.success-icon.out{background:linear-gradient(135deg,#C0392B,#e74c3c);box-shadow:0 8px 28px rgba(192,57,43,.5)}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.success-screen h2{font-family:'DM Serif Display',serif;font-size:26px;color:#fff;margin-bottom:6px}
+.success-screen p{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:20px;line-height:1.6}
+.hash-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:10px;color:var(--gold);word-break:break-all;margin-bottom:20px;text-align:left;width:100%}
+.hash-label{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.detail-grid{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+.detail-item{background:rgba(255,255,255,.06);border-radius:10px;padding:10px 12px}
+.detail-label{font-size:9px;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.detail-val{font-size:14px;font-weight:600;color:#fff}
+.done-btn{width:100%;padding:16px;border-radius:14px;border:none;background:rgba(255,255,255,.1);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .18s}
+.done-btn:hover{background:rgba(255,255,255,.15)}
+.done-btn:active{transform:scale(.98)}
+
+/* ERROR SCREEN */
+.error-screen{width:100%;display:none;flex-direction:column;align-items:center;text-align:center}
+.error-icon{width:72px;height:72px;border-radius:50%;background:rgba(192,57,43,.2);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 18px}
+.error-screen h2{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:8px}
+.error-screen p{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:20px;line-height:1.6}
+.retry-btn{padding:13px 28px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+
+/* FOOTER */
+.app-footer{margin-top:20px;text-align:center;font-size:10px;color:rgba(255,255,255,.2)}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-mark">&#9829;</div>
+  <h1>Doctors That Care</h1>
+  <p>Loading client details...</p>
+  <div class="spinner"></div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="app">
+  <div class="app-header">
+    <div class="dtc-mark">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/></svg>
+    </div>
+    <h1>Doctors That Care</h1>
+    <p id="worker-greeting">Care Worker Check In</p>
+  </div>
+
+  <div class="client-card" id="client-card">
+    <div class="client-avatar" id="client-avatar" style="background:#0B3D6E">MT</div>
+    <div class="client-info">
+      <div class="client-name" id="client-name">Loading...</div>
+      <div class="client-sub" id="client-sub">Loading address...</div>
+      <div class="client-type" id="client-type">Care type</div>
+    </div>
+  </div>
+
+  <div class="gps-row checking" id="gps-row">
+    <div class="gps-dot checking" id="gps-dot"></div>
+    <span id="gps-label">Getting your location...</span>
+  </div>
+
+  <div class="active-shift" id="active-shift" style="display:none">
+    <div class="active-dot"></div>
+    <div class="active-info">
+      <div class="active-label">Shift in progress</div>
+      <div class="active-time" id="active-time">Started at --:--</div>
+    </div>
+  </div>
+
+  <button class="action-btn checkin disabled" id="checkin-btn" onclick="doCheckin()">
+    <div class="btn-icon">&#9654;</div>
+    <div class="btn-text">
+      <span class="btn-label">Check In</span>
+      <span class="btn-sub">Start your shift — GPS required</span>
+    </div>
+  </button>
+
+  <button class="action-btn checkout disabled" id="checkout-btn" onclick="doCheckout()">
+    <div class="btn-icon">&#9632;</div>
+    <div class="btn-text">
+      <span class="btn-label">Check Out</span>
+      <span class="btn-sub">End shift and generate invoice</span>
+    </div>
+  </button>
+
+  <div class="app-footer">
+    <div id="footer-hash"></div>
+    Doctors That Care &nbsp;&#183;&nbsp; Blockchain verified
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-screen" id="success-screen">
+  <div class="success-icon" id="success-icon">&#10003;</div>
+  <h2 id="success-title">Checked In</h2>
+  <p id="success-msg">Your shift has started and is blockchain sealed.</p>
+  <div class="detail-grid" id="detail-grid"></div>
+  <div class="hash-box">
+    <div class="hash-label">Block hash — blockchain sealed</div>
+    <div id="success-hash">...</div>
+  </div>
+  <button class="done-btn" onclick="resetToMain()">Done</button>
+</div>
+
+<!-- ERROR -->
+<div class="error-screen" id="error-screen">
+  <div class="error-icon">&#9888;</div>
+  <h2 id="error-title">Client Not Found</h2>
+  <p id="error-msg">This QR code could not be matched to an active client. Please contact your coordinator.</p>
+  <button class="retry-btn" onclick="location.reload()">Try Again</button>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+var SUPABASE_URL = 'https://cfckarzxrrwwhelftmag.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmY2thcnp4cnJ3d2hlbGZ0bWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjE2NDEsImV4cCI6MjA5NDc5NzY0MX0.YgkcpPvHHcMVHQP92snZT4I-dVjsm3L0_D4QgANjFhk';
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── DEMO CLIENT DATA (replace with Supabase lookup in production) ─────────────
+var DEMO_CLIENTS = {
+  'a3f8b2d1c7d2': {id:'c1', name:'Margaret Thompson', suburb:'Parramatta', address:'12 Oak St, Parramatta NSW 2150', caretype:'Aged care - Support at Home', colorIdx:0, lat:-33.8150, lng:151.0011},
+  'b4e9c3a2c7d2': {id:'c2', name:'Ronald Patterson', suburb:'Blacktown', address:'47 River Rd, Blacktown NSW 2148', caretype:'Post-hospital discharge', colorIdx:1, lat:-33.7668, lng:150.9054},
+  'c5f0d4b3c7d2': {id:'c3', name:'Dorothy Chen', suburb:'Strathfield', address:'8 Maple Ave, Strathfield NSW 2135', caretype:'Dementia support', colorIdx:2, lat:-33.8721, lng:151.0919},
+};
+// Simple number lookup - c=1, c=2, c=3
+var CLIENTS_BY_NUM = {
+  '1': 'a3f8b2d1c7d2',
+  '2': 'b4e9c3a2c7d2',
+  '3': 'c5f0d4b3c7d2',
+};
+var AVATARBG = ['#0B3D6E','#1A5276','#117A65','#784212','#6C3483','#1B4F72'];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+var currentClient = null;
+var gpsCoords = null;
+var gpsAccuracy = null;
+var checkinTime = null;
+var checkinHash = null;
+var activeShift = JSON.parse(localStorage.getItem('dtc_active_shift') || 'null');
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function initials(n){return n.split(' ').filter(Boolean).map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();}
+
+async function sha256(str){
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('').slice(0,16);
+}
+
+function now(){return new Date().toTimeString().slice(0,5);}
+function nowFull(){return new Date().toISOString().slice(0,19).replace('T',' ');}
+
+// ── GPS ───────────────────────────────────────────────────────────────────────
+function startGPS(){
+  var gpsRow = document.getElementById('gps-row');
+  var gpsDot = document.getElementById('gps-dot');
+  var gpsLabel = document.getElementById('gps-label');
+
+  if(!navigator.geolocation){
+    gpsRow.className = 'gps-row warn';
+    gpsDot.className = 'gps-dot warn';
+    gpsLabel.textContent = 'GPS not available on this device';
+    enableButtons(false);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      gpsCoords = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      gpsAccuracy = Math.round(pos.coords.accuracy);
+
+      // Check distance from client address
+      if(currentClient && currentClient.lat){
+        var dist = calcDistance(gpsCoords.lat, gpsCoords.lng, currentClient.lat, currentClient.lng);
+        var distM = Math.round(dist * 1000);
+
+        if(distM <= 200){
+          gpsRow.className = 'gps-row ok';
+          gpsDot.className = 'gps-dot ok';
+          gpsLabel.textContent = 'GPS verified — ' + distM + 'm from ' + currentClient.suburb + ' (accuracy ±' + gpsAccuracy + 'm)';
+        } else {
+          gpsRow.className = 'gps-row warn';
+          gpsDot.className = 'gps-dot warn';
+          gpsLabel.textContent = 'GPS drift — ' + distM + 'm from registered address (accuracy ±' + gpsAccuracy + 'm)';
+        }
+      } else {
+        gpsRow.className = 'gps-row ok';
+        gpsDot.className = 'gps-dot ok';
+        gpsLabel.textContent = 'GPS captured (accuracy ±' + gpsAccuracy + 'm)';
+      }
+      enableButtons(true);
+    },
+    function(err){
+      var msgs = {1:'Location access denied — please allow in browser settings', 2:'GPS signal unavailable', 3:'GPS timed out'};
+      gpsRow.className = 'gps-row warn';
+      gpsDot.className = 'gps-dot warn';
+      gpsLabel.textContent = (msgs[err.code] || 'GPS error') + ' — you can still check in';
+      enableButtons(true); // allow check-in even without GPS, just flagged
+    },
+    {enableHighAccuracy: true, timeout: 10000, maximumAge: 0}
+  );
+}
+
+function calcDistance(lat1, lng1, lat2, lng2){
+  var R = 6371;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── BUTTON STATE ─────────────────────────────────────────────────────────────
+function enableButtons(gpsReady){
+  var ciBtn = document.getElementById('checkin-btn');
+  var coBtn = document.getElementById('checkout-btn');
+  var activeDiv = document.getElementById('active-shift');
+
+  if(activeShift && activeShift.clientId === currentClient.id){
+    // Shift in progress — show checkout only
+    ciBtn.className = 'action-btn checkin disabled';
+    coBtn.className = 'action-btn checkout';
+    activeDiv.style.display = 'flex';
+    document.getElementById('active-time').textContent = 'Started at ' + activeShift.timeIn;
+  } else {
+    // No active shift — show checkin only
+    ciBtn.className = 'action-btn checkin' + (gpsReady ? '' : ' disabled');
+    coBtn.className = 'action-btn checkout disabled';
+    activeDiv.style.display = 'none';
+  }
+}
+
+// ── CHECK IN ─────────────────────────────────────────────────────────────────
+async function doCheckin(){
+  if(document.getElementById('checkin-btn').classList.contains('disabled')) return;
+  var btn = document.getElementById('checkin-btn');
+  btn.classList.add('loading-state');
+  btn.querySelector('.btn-label').textContent = 'Recording...';
+
+  var t = now();
+  var gpsStr = gpsCoords ? (gpsCoords.lat.toFixed(6) + ',' + gpsCoords.lng.toFixed(6)) : 'no-gps';
+  var gpsOk = document.getElementById('gps-row').className.includes('ok');
+  var hash = await sha256(currentClient.id + t + gpsStr + Math.random());
+
+  // Save active shift to localStorage
+  activeShift = {
+    clientId: currentClient.id,
+    clientName: currentClient.name,
+    timeIn: t,
+    hash: hash,
+    gpsOk: gpsOk,
+    gpsCoords: gpsStr,
+    gpsAccuracy: gpsAccuracy,
+    date: new Date().toLocaleDateString('en-AU'),
+  };
+  localStorage.setItem('dtc_active_shift', JSON.stringify(activeShift));
+  checkinHash = hash;
+  checkinTime = t;
+
+  // Show success
+  showSuccess('in', {
+    title: 'Checked In',
+    msg: 'Your shift has started. Blockchain block sealed' + (gpsOk ? ' with GPS verification.' : '. GPS location noted.'),
+    details: [
+      {label:'Client', val: currentClient.name.split(' ')[0]},
+      {label:'Time in', val: t},
+      {label:'GPS', val: gpsOk ? 'Verified' : 'Flagged'},
+      {label:'Accuracy', val: gpsAccuracy ? '±' + gpsAccuracy + 'm' : 'N/A'},
+    ],
+    hash: hash,
+  });
+}
+
+// ── CHECK OUT ─────────────────────────────────────────────────────────────────
+async function doCheckout(){
+  if(document.getElementById('checkout-btn').classList.contains('disabled')) return;
+  if(!activeShift) return;
+  var btn = document.getElementById('checkout-btn');
+  btn.classList.add('loading-state');
+  btn.querySelector('.btn-label').textContent = 'Sealing shift...';
+
+  var t = now();
+  var inParts = activeShift.timeIn.split(':');
+  var outParts = t.split(':');
+  var inM = parseInt(inParts[0])*60 + parseInt(inParts[1]);
+  var outM = parseInt(outParts[0])*60 + parseInt(outParts[1]);
+  var diff = outM - inM; if(diff <= 0) diff += 1440;
+  var hrs = Math.floor(diff/60);
+  var mins = diff % 60;
+  var dur = hrs + 'h ' + String(mins).padStart(2,'0') + 'm';
+
+  var gpsStr = gpsCoords ? (gpsCoords.lat.toFixed(6) + ',' + gpsCoords.lng.toFixed(6)) : 'no-gps';
+  var hash = await sha256(activeShift.hash + t + gpsStr + currentClient.id);
+
+  // Clear active shift
+  localStorage.removeItem('dtc_active_shift');
+  activeShift = null;
+
+  showSuccess('out', {
+    title: 'Shift Complete',
+    msg: 'Shift sealed on blockchain. Duration: ' + dur + '. Invoice will be generated automatically.',
+    details: [
+      {label:'Time in', val: inParts.join(':')},
+      {label:'Time out', val: t},
+      {label:'Duration', val: dur},
+      {label:'Invoice', val: 'Generating...'},
+    ],
+    hash: hash,
+  });
+}
+
+// ── SHOW SUCCESS ─────────────────────────────────────────────────────────────
+function showSuccess(type, data){
+  document.getElementById('app').style.display = 'none';
+  var s = document.getElementById('success-screen');
+  s.style.display = 'flex';
+
+  var icon = document.getElementById('success-icon');
+  icon.className = 'success-icon ' + type;
+  icon.textContent = type === 'in' ? '\u2713' : '\u25a0';
+
+  document.getElementById('success-title').textContent = data.title;
+  document.getElementById('success-msg').textContent = data.msg;
+  document.getElementById('success-hash').textContent = data.hash;
+
+  var grid = document.getElementById('detail-grid');
+  grid.innerHTML = data.details.map(function(d){
+    return '<div class="detail-item"><div class="detail-label">' + d.label + '</div><div class="detail-val">' + d.val + '</div></div>';
+  }).join('');
+}
+
+function resetToMain(){
+  document.getElementById('success-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  enableButtons(gpsCoords !== null);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function showError(title, msg){
+  document.getElementById('loading-screen').style.display = 'none';
+  var e = document.getElementById('error-screen');
+  e.style.display = 'flex';
+  document.getElementById('error-title').textContent = title;
+  document.getElementById('error-msg').textContent = msg;
+}
+
+function init(){
+  // Read client ID from URL param
+  var params = new URLSearchParams(window.location.search);
+  var clientId = params.get('c') || params.get('client');
+
+  // Demo mode: if no client ID, show the first demo client
+  if(!clientId){
+    clientId = Object.keys(DEMO_CLIENTS)[0];
+  }
+
+  // Resolve simple number (c=1, c=2, c=3) to hash key
+  if(CLIENTS_BY_NUM[clientId]){
+    clientId = CLIENTS_BY_NUM[clientId];
+  }
+
+  // Look up client
+  var client = null;
+  var keys = Object.keys(DEMO_CLIENTS);
+  for(var i = 0; i < keys.length; i++){
+    if(keys[i].indexOf(clientId) === 0 || clientId.indexOf(keys[i].slice(0,8)) === 0 || keys[i] === clientId){
+      client = DEMO_CLIENTS[keys[i]];
+      break;
+    }
+  }
+
+  // Also check exact match
+  if(!client && DEMO_CLIENTS[clientId]){
+    client = DEMO_CLIENTS[clientId];
+  }
+
+  // Fallback to first client for demo
+  if(!client){
+    client = DEMO_CLIENTS[Object.keys(DEMO_CLIENTS)[0]];
+  }
+
+  currentClient = client;
+
+  // Populate UI
+  var bg = AVATARBG[client.colorIdx || 0];
+  document.getElementById('client-avatar').style.background = bg;
+  document.getElementById('client-avatar').textContent = initials(client.name);
+  document.getElementById('client-name').textContent = client.name;
+  document.getElementById('client-sub').textContent = client.address;
+  document.getElementById('client-type').textContent = client.caretype;
+  document.getElementById('footer-hash').textContent = 'Client ID: ' + Object.keys(DEMO_CLIENTS).find(function(k){return DEMO_CLIENTS[k]===client;}).toUpperCase() + '  ';
+
+  // Show app
+  setTimeout(function(){
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    enableButtons(false);
+    startGPS();
+  }, 800);
+}
+
+// Start
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
